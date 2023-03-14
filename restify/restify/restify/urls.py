@@ -14,17 +14,17 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.urls import path
-from property.views import PropertyCreateAPIView, PropertyUpdateAPIView, PropertyListAPIView, PropertyDeleteAPIView, PropertySearchView
+from django.urls import include, path
+# from property.views import PropertyCreateAPIView, PropertyUpdateAPIView, PropertyListAPIView, PropertyDeleteAPIView, PropertySearchView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('properties/create/', PropertyCreateAPIView.as_view(), name='property_create'),
-    path('properties/update/<int:pk>/', PropertyUpdateAPIView.as_view(), name='property_update'),
-    path('properties/', PropertyListAPIView.as_view(), name='property_list'),
-    path('properties/delete/<int:pk>/', PropertyDeleteAPIView.as_view(), name='property_delete'),
-    path('properties/search/', PropertySearchView.as_view(), name='property-search'),
+    path('property/', include('property.urls')),
+    # path('properties/create/', PropertyCreateAPIView.as_view(), name='property_create'),
+    # path('properties/update/<int:pk>/', PropertyUpdateAPIView.as_view(), name='property_update'),
+    # path('properties/', PropertyListAPIView.as_view(), name='property_list'),
+    # path('properties/delete/<int:pk>/', PropertyDeleteAPIView.as_view(), name='property_delete'),
+    # path('properties/search/', PropertySearchView.as_view(), name='property-search'),
 ]
 
 
