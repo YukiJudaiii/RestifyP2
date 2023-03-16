@@ -51,6 +51,8 @@ SIMPLE_JWT = {
     'OUTSTANDING_TOKEN_LIST_BLACKLIST_ENABLED': True,  # enable token blacklisting
 }
 
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -67,7 +69,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'rest_framework_swagger',
+    'reservation',
+    'accounts',
 ]
 
 MIDDLEWARE = [

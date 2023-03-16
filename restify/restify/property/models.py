@@ -1,12 +1,13 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.contrib.auth.models import User
+
 from django.core.exceptions import ValidationError
+from accounts.models import CustomUser
 
 # Create your models here.
 class Property(models.Model):
     name = models.CharField(max_length=255, unique=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     owner_first_name = models.CharField(max_length=255)
     owner_last_name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)

@@ -1,13 +1,11 @@
 
 from django.db import models
-from django.contrib.auth import get_user_model
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
+from accounts.models import CustomUser
+from property.models import Property
 
 
-class Comments(models.Model):
-    content = models.CharField(max_length=200)
-    author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True)
-    address_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    address_id = models.PositiveIntegerField()
-    address_object = GenericForeignKey("address_type", "address_id")
+class Comment(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    property = models.ForeignKey(Property, on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)

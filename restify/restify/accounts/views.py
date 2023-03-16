@@ -1,21 +1,21 @@
 from django.shortcuts import render
-from django.contrib.auth.models import User
+
 from django.contrib.auth import authenticate
-from .serializers import UserSerializer, LogInSerializer
-from rest_framework import generics
+from .serializers import UserSerializer, LogInSerializer, ProfileSerializer
+from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.settings import api_settings
+
+from accounts.models import CustomUser
 
 # Create your views here.
 
 
 class UserSignUpAPIView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     
 
@@ -78,32 +78,37 @@ class UserLogoutAPIView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserProfileAPIView(APIView):
-    
+class IsOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.username == request.user.username
 
+
+class UserProfileAPIView(APIView):
+    permission_classes = (permissions.IsAuthenticated, IsOwner)
+    serializer_class = ProfileSerializer
+    
+    def get_object(self, username):
+        return get_object_or_404(CustomUser, username=username)
+    
     def get(self, request, username):
-        User = get_user_model()
-        user = get_object_or_404(User, username=username)
+        if request.user.username != username:
+            # The user is not authorized to access this profile
+            return Response({'error': 'You are not authorized to access this profile.'}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(CustomUser, username=username)
         return Response({
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'address': user.address,
+            'avatar': user.avatar.url if user.avatar else None,
+            'phone_number': str(user.phone_number),
         })
     
-    def post(self, request):
-        user = request.user
-        user.email = request.data.get('email', user.email)
-        user.first_name = request.data.get('first_name', user.first_name)
-        user.last_name = request.data.get('last_name', user.last_name)
-        user.address = request.data.get('address', user.address)
-        user.save()
-        data = {
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'address': user.address,
-        }
-        return Response(data)
+    def put(self, request, username):
+        user = self.get_object(username)
+        serializer = ProfileSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
