@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from .serializers import UserSerializer, LogInSerializer
+from .serializers import UserSerializer, LogInSerializer, ProfileSerializer
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
@@ -79,7 +79,7 @@ class UserLogoutAPIView(APIView):
 
 
 class UserProfileAPIView(APIView):
-    
+    serializer_class = UserSerializer
 
     def get(self, request, username):
         User = get_user_model()
@@ -89,21 +89,11 @@ class UserProfileAPIView(APIView):
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
-            'address': user.address,
         })
     
-    def post(self, request):
-        user = request.user
-        user.email = request.data.get('email', user.email)
-        user.first_name = request.data.get('first_name', user.first_name)
-        user.last_name = request.data.get('last_name', user.last_name)
-        user.address = request.data.get('address', user.address)
-        user.save()
-        data = {
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'address': user.address,
-        }
-        return Response(data)
+    def put(self, request):
+        serializer = ProfileSerializer(request.user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
