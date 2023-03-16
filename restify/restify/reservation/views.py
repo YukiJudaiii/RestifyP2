@@ -7,11 +7,13 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Reservation
 from property.models import Property
-from .serializers import ReservationSerializer, ReservationActionSerializer
+from .serializers import ReservationSerializer, ReservationActionSerializer, ReservationApproveDenyCancelSerializer
 from .filters import ReservationFilter
 from accounts.models import CustomUser
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import PermissionDenied
 
+from datetime import date
 
 class ReservationPagination(PageNumberPagination):
     page_size = 2
@@ -38,52 +40,67 @@ class ReservationCreateView(generics.CreateAPIView):
         serializer.save(user=self.request.user, state=Reservation.PENDING, property_name=property_name)
 
 # Cancel
-class ReservationCancelView(mixins.UpdateModelMixin, generics.RetrieveAPIView):
+class ReservationCancelView(generics.UpdateAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationActionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self, request, *args, **kwargs):
-        reservation = self.get_object()
-        u = get_object_or_404(CustomUser, username=self.request.user.username)
-        if reservation.user == u:
-            reservation.state = Reservation.CANCELED
-            reservation.save()
-        return self.update(request, *args, **kwargs)
-
-# Approve/Deny Pending
-class ReservationApproveDenyPendingView(generics.UpdateAPIView):
-    queryset = Reservation.objects.all()
-    serializer_class = ReservationActionSerializer
-
     def perform_update(self, serializer):
         reservation = self.get_object()
-        if reservation.property.owner == self.request.user:
-            new_state = self.request.data.get('state')
-            if new_state in [Reservation.APPROVED, Reservation.DENIED]:
-                reservation.state = new_state
-                reservation.save()
+        if reservation.user == self.request.user:
+            reservation.state = Reservation.PENDING_CANCEL
+            reservation.save()
 
-# Approve/Deny Cancel
 class ReservationApproveDenyCancelView(generics.UpdateAPIView):
     queryset = Reservation.objects.all()
-    serializer_class = ReservationActionSerializer
+    serializer_class = ReservationApproveDenyCancelSerializer
+    # permission_classes = [permissions.IsAuthenticated]
 
     def perform_update(self, serializer):
         reservation = self.get_object()
-        if reservation.property.owner == self.request.user:
-            new_state = self.request.data.get('state')
-            if new_state in [Reservation.APPROVED, Reservation.DENIED]:
-                reservation.state = new_state
-                reservation.save()
+        u = get_object_or_404(CustomUser, username=self.request.user.username)
+        property_owner = reservation.property.owner
+        if u == property_owner:
+            action = self.request.data.get('action', None)
+            if action == 'approve':
+                if reservation.state == Reservation.PENDING_CANCEL:
+                    reservation.state = Reservation.CANCELED
+                else:
+                    reservation.state = Reservation.APPROVED
+            elif action == 'deny':
+                if reservation.state == Reservation.PENDING_CANCEL:
+                    reservation.state = Reservation.CANCELED
+                else:
+                    reservation.state = Reservation.DENIED
+            elif action == 'approve_cancel':
+                reservation.state = Reservation.CANCELED
+            elif action == 'deny_cancel':
+                reservation.state = Reservation.APPROVED
+            reservation.save()
+        else:
+            raise PermissionDenied("You are not the owner of this property.")
 
-# Terminate
 class ReservationTerminateView(generics.UpdateAPIView):
     queryset = Reservation.objects.all()
     serializer_class = ReservationActionSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_update(self, serializer):
         reservation = self.get_object()
-        if reservation.property.owner == self.request.user:
+        property_owner = reservation.property.owner
+        if self.request.user == property_owner:
             reservation.state = Reservation.TERMINATED
+            reservation.save()
+        else:
+            raise PermissionDenied("You are not the owner of this property.")
+
+class ReservationExpireView(generics.UpdateAPIView):
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationActionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_update(self, serializer):
+        reservation = self.get_object()
+        if reservation.state == Reservation.PENDING and date.today() >= reservation.from_date:
+            reservation.state = Reservation.EXPIRED
             reservation.save()
