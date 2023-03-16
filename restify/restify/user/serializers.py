@@ -66,17 +66,32 @@ class LogInSerializer(TokenObtainPairSerializer):
 class ProfileSerializer(UserSerializer):
     new_password = serializers.CharField(write_only=True, required=False)
     confirm_new_password = serializers.CharField(write_only=True, required=False)
+    email = serializers.EmailField(required=False)
 
     class Meta:
         model = User
         fields = ('email', 'first_name', 'last_name', 'new_password', 'confirm_new_password')
 
     def validate(self, data):
-        if 'new_password' in data and 'confirm_new_password' in data:
-            if data['new_password'] != data['confirm_new_password']:
-                raise serializers.ValidationError("New passwords do not match.")
-            data.pop('confirm_new_password')
+        new_password = data.get('new_password')
+        confirm_new_password = data.get('confirm_new_password')
+
+        if new_password and not confirm_new_password:
+            raise serializers.ValidationError("Please confirm the new password.")
+
+        if confirm_new_password and not new_password:
+            raise serializers.ValidationError("Please provide a new password.")
+
+        if new_password != confirm_new_password:
+            raise serializers.ValidationError("New passwords do not match.")
+
+        if new_password is not None and len(new_password) < 8:
+            raise serializers.ValidationError("The password must be at least 8 characters long.")
+
+        data.pop('confirm_new_password', None)
+
         return super().validate(data)
+
 
     def update(self, instance, validated_data):
         if validated_data.get('email'):
