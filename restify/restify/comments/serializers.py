@@ -24,16 +24,6 @@ class CommentsSerializerCreate(ModelSerializer):
             'address_id'
         ]
 
-    # def create(self, validated_data):
-    #     Notifications.objects.create(sender_type=get_user_model(),
-    #                                  sender_id=self.context.get('request').user,
-    #                                  receiver_id=validated_data["address_id"],
-    #                                  reservation=False,
-    #                                  cancellation=False,
-    #                                  comment=True
-    #                                  )
-    #     return super().create(validated_data)
-
     def create(self, serializer):
         comment = serializer.save()
         notification_serializer = models.NotificationsDetailSerializer(data={
