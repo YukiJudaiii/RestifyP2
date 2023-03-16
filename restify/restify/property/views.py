@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import filters, pagination
 from rest_framework import permissions, status
 from rest_framework.exceptions import PermissionDenied
+from .filters import PropertyFilter
 
 
 # Create your views here.
@@ -45,7 +46,7 @@ class PropertyListAPIView(ListAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['location', 'available_dates', 'guests', 'amenities']
+    filterset_fields = ['location', 'from_date', 'to_date', 'guests', 'amenities']
     ordering_fields = ['price', 'rating']
     pagination_class = LimitOffsetPagination
     
@@ -62,10 +63,9 @@ class PropertyPagination(pagination.PageNumberPagination):
 class PropertySearchView(ListAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['location', 'amenities', 'available_dates', 'guests']
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = PropertyFilter
     ordering_fields = ['price', 'guests']
-    filter_fields = ['location', 'amenities', 'available_dates', 'guests']
     pagination_class = PropertyPagination
 
     def get_queryset(self):

@@ -1,14 +1,17 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 class Property(models.Model):
+    name = models.CharField(max_length=255, unique=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     owner_first_name = models.CharField(max_length=255)
     owner_last_name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
-    available_dates = models.DateField()
+    from_date = models.DateField()
+    to_date = models.DateField()
     guests = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     number_of_bedrooms = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
     number_of_washrooms = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(10)])
@@ -17,3 +20,11 @@ class Property(models.Model):
     amenities = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     # rating = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(5.0)])
+    
+    def save(self, *args, **kwargs):
+        if self.to_date <= self.from_date:
+            raise ValidationError("to_date must be later than from_date")
+        super(Property, self).save(*args, **kwargs)
+        
+    # def __str__(self):
+    #     return self.name
