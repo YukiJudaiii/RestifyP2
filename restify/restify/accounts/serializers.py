@@ -1,8 +1,9 @@
-from django.contrib.auth.models import User
+
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from .models import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -11,11 +12,13 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(max_length=30, required=False)
     last_name = serializers.CharField(max_length=30, required=False)
+    avatar = serializers.ImageField(required=False, allow_null=True)
+    phone_number = serializers.CharField(required=False, allow_null=True)
 
 
     class Meta:
-        model = User
-        fields = ('username', 'email', 'password', 'password_repeat', 'first_name', 'last_name')
+        model = CustomUser
+        fields = ('username', 'email', 'password', 'password_repeat', 'first_name', 'last_name', 'avatar', 'phone_number')
 
     def validate_password_length(self, value):
         """
@@ -33,7 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
     
     
     def create(self, validated_data):
-        user = User.objects.create_user(
+        user = CustomUser.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
@@ -42,6 +45,10 @@ class UserSerializer(serializers.ModelSerializer):
             user.first_name = validated_data['first_name']
         if validated_data.get('last_name'):
             user.last_name = validated_data['last_name']
+        if validated_data.get('avatar'):
+            user.avatar = validated_data['avatar']
+        if validated_data.get('phone_number'):
+            user.phone_number = validated_data['phone_number']
         user.save()
         return user
 
@@ -69,8 +76,8 @@ class ProfileSerializer(UserSerializer):
     email = serializers.EmailField(required=False)
 
     class Meta:
-        model = User
-        fields = ('email', 'first_name', 'last_name', 'new_password', 'confirm_new_password')
+        model = CustomUser
+        fields = ('email', 'first_name', 'last_name', 'new_password', 'confirm_new_password', 'avatar', 'phone_number')
 
     def validate(self, data):
         new_password = data.get('new_password')
