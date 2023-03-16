@@ -44,7 +44,7 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
     'OUTSTANDING_TOKEN_LIST_BLACKLIST_ENABLED': True,  # enable token blacklisting
@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'comments',
+    'notification',
     'property',
     'rest_framework',
     'django_filters',
