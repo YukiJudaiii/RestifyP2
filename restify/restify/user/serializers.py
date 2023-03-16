@@ -93,6 +93,7 @@ class ProfileSerializer(UserSerializer):
         return super().validate(data)
 
 
+
     def update(self, instance, validated_data):
         if validated_data.get('email'):
             instance.email = validated_data['email']
