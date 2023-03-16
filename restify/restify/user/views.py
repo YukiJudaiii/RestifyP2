@@ -1,15 +1,15 @@
 from django.shortcuts import render
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate
 from .serializers import UserSerializer, LogInSerializer
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
-
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.settings import api_settings
 
 # Create your views here.
 
@@ -17,8 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 class UserSignUpAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
-
+    
 
 class UserLoginAPIView(APIView):
     serializer_class = LogInSerializer
@@ -33,7 +32,6 @@ class UserLoginAPIView(APIView):
         user = authenticate(username=username, password=password)
 
         if user is not None:
-            login(request, user)
             refresh = RefreshToken.for_user(user)
             response = Response({'message': 'Login successful! Welcome ' + username + '!'})
 
@@ -82,23 +80,30 @@ class UserLogoutAPIView(APIView):
 
 class UserProfileAPIView(APIView):
     
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        # Get the user object
-        user = request.user
-        
-        # Get the user's information
-        user_info = {
-            'id': user.id,
+
+    def get(self, request, username):
+        User = get_user_model()
+        user = get_object_or_404(User, username=username)
+        return Response({
             'username': user.username,
-        }
-        
-        # Serialize the user data and return it in the response
-        serializer = UserSerializer(user)
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'address': user.address,
+        })
+    
+    def post(self, request):
+        user = request.user
+        user.email = request.data.get('email', user.email)
+        user.first_name = request.data.get('first_name', user.first_name)
+        user.last_name = request.data.get('last_name', user.last_name)
+        user.address = request.data.get('address', user.address)
+        user.save()
         data = {
-            'user': user_info,
-            'profile': serializer.data
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'address': user.address,
         }
         return Response(data)
-
