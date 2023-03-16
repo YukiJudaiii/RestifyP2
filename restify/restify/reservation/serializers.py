@@ -27,11 +27,11 @@ class ReservationSerializer(serializers.ModelSerializer):
         duplicate_reservations = Reservation.objects.filter(
             property=data['property'],
             from_date__lte=data['to_date'],
-            to_date__gte=data['from_date']
+            to_date__gte=data['from_date'],
+            state = Reservation.PENDING,
         )
-
         # also check if the reservation is already canceled or denied
-        if duplicate_reservations.exists() and (not duplicate_reservations.filter(state=Reservation.CANCELED).exists() or not duplicate_reservations.filter(state=Reservation.DENIED).exists()):
+        if duplicate_reservations.exists():
             raise serializers.ValidationError("The property is already booked during the specified dates.")
 
         return data
@@ -44,3 +44,27 @@ class ReservationActionSerializer(serializers.ModelSerializer):
         model = Reservation
         fields = ['id', 'user', 'property', 'from_date', 'to_date', 'state']
         read_only_fields = ['id', 'user', 'property', 'from_date', 'to_date', 'state']
+
+
+      
+class ReservationApproveDenyCancelSerializer(serializers.ModelSerializer):
+    action = serializers.ChoiceField(choices=['approve', 'deny', 'approve_cancel', 'deny_cancel'])
+
+    class Meta:
+        model = Reservation
+        fields = ['id', 'action',]
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     instance = kwargs.get('instance', None)
+    #     if instance:
+    #         if instance.state == Reservation.PENDING_CANCEL:
+    #             self.fields['action'].choices = [
+    #                 ('approve_cancel', 'Approve Cancel'),
+    #                 ('deny_cancel', 'Deny Cancel'),
+    #             ]
+    #         else:
+    #             self.fields['action'].choices = [
+    #                 ('approve', 'Approve'),
+    #                 ('deny', 'Deny'),
+    #             ]
