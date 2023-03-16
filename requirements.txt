@@ -3,3 +3,6 @@ djangorestframework
 markdown
 django-filter
 djangorestframework-simplejwt
+django_phonenumber_field
+phonenumbers 
+Pillow

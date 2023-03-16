@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.contrib.auth.models import User
+
 from django.contrib.auth import authenticate
 from .serializers import UserSerializer, LogInSerializer, ProfileSerializer
 from rest_framework import generics, permissions
@@ -8,14 +8,14 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
-from django.contrib.auth import get_user_model
 
+from accounts.models import CustomUser
 
 # Create your views here.
 
 
 class UserSignUpAPIView(generics.CreateAPIView):
-    queryset = User.objects.all()
+    queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     
 
@@ -88,21 +88,21 @@ class UserProfileAPIView(APIView):
     serializer_class = ProfileSerializer
     
     def get_object(self, username):
-        User = get_user_model()
-        return get_object_or_404(User, username=username)
+        return get_object_or_404(CustomUser, username=username)
     
     def get(self, request, username):
         if request.user.username != username:
             # The user is not authorized to access this profile
             return Response({'error': 'You are not authorized to access this profile.'}, status=status.HTTP_403_FORBIDDEN)
-        
-        User = get_user_model()
-        user = get_object_or_404(User, username=username)
+
+        user = get_object_or_404(CustomUser, username=username)
         return Response({
             'username': user.username,
             'email': user.email,
             'first_name': user.first_name,
             'last_name': user.last_name,
+            'avatar': user.avatar.url if user.avatar else None,
+            'phone_number': str(user.phone_number),
         })
     
     def put(self, request, username):
