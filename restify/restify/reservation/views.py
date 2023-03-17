@@ -12,6 +12,7 @@ from .filters import ReservationFilter
 from accounts.models import CustomUser
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
+from notification.models import Notification
 
 from datetime import date
 
@@ -38,6 +39,9 @@ class ReservationCreateView(generics.CreateAPIView):
         property_instance = self.request.data.get('property')
         property_name = Property.objects.get(id=property_instance).name
         serializer.save(user=self.request.user, state=Reservation.PENDING, property_name=property_name)
+        
+        property_owner = Property.objects.get(id=property_instance).owner
+        Notification.objects.create(recipient=property_owner, content=f"{u.username} has requested to reserve your property {property_name}.")
 
 # Cancel
 class ReservationCancelView(generics.UpdateAPIView):
@@ -50,6 +54,11 @@ class ReservationCancelView(generics.UpdateAPIView):
         if reservation.user == self.request.user:
             reservation.state = Reservation.PENDING_CANCEL
             reservation.save()
+            
+            property_instance = self.request.data.get('property')
+            property_name = Property.objects.get(id=property_instance).name
+            property_owner = Property.objects.get(id=property_instance).owner
+            Notification.objects.create(recipient=property_owner, content=f"{reservation.user.username} has requested to cancel the reservation of your property {property_name}.")
 
 class ReservationApproveDenyCancelView(generics.UpdateAPIView):
     queryset = Reservation.objects.all()
@@ -69,7 +78,7 @@ class ReservationApproveDenyCancelView(generics.UpdateAPIView):
                     reservation.state = Reservation.APPROVED
             elif action == 'deny':
                 if reservation.state == Reservation.PENDING_CANCEL:
-                    reservation.state = Reservation.CANCELED
+                    reservation.state = Reservation.PENDING
                 else:
                     reservation.state = Reservation.DENIED
             elif action == 'approve_cancel':
