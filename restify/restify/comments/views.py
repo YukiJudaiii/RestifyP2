@@ -5,6 +5,8 @@ from .serializers import CommentSerializer, CommentReplySerializer, UserCommentS
 from property.models import Property
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 from django.core.exceptions import PermissionDenied
 
@@ -35,7 +37,7 @@ class ReplyToCommentView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        parent_comment_id = self.kwargs['parent_comment_id']
+        parent_comment_id = self.kwargs['comment_id']
 
         try:
             parent_comment = Comment.objects.get(id=parent_comment_id)
@@ -105,6 +107,19 @@ class UserCommentCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
+        target_username = self.request.data.get('target_username')
+        
+        try:
+            target_user = CustomUser.objects.get(username=target_username)
+        except CustomUser.DoesNotExist:
+            raise ValidationError({"detail": f"Target user '{target_username}' does not exist."})
+        
+        if user == target_user:
+            raise ValidationError({"detail": "You cannot comment on yourself."})
+        
+        if UserComment.objects.filter(author=user, target_user=target_user).exists():
+            raise ValidationError({"detail": "You have already commented on this user."})
+        
         serializer.save(author=user)
 
 
