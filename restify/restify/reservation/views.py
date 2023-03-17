@@ -74,17 +74,23 @@ class ReservationApproveDenyCancelView(generics.UpdateAPIView):
             if action == 'approve':
                 if reservation.state == Reservation.PENDING_CANCEL:
                     reservation.state = Reservation.CANCELED
+                    Notification.objects.create(recipient=reservation.user, content=f"{u.username} has approved your cancellation of {reservation.property.name}.")
                 else:
                     reservation.state = Reservation.APPROVED
+                    Notification.objects.create(recipient=reservation.user, content=f"{u.username} has approved your request to reserve {reservation.property.name}.")
             elif action == 'deny':
                 if reservation.state == Reservation.PENDING_CANCEL:
                     reservation.state = Reservation.PENDING
+                    Notification.objects.create(recipient=reservation.user, content=f"{u.username} has denied your cancellation of {reservation.property.name}.")
                 else:
                     reservation.state = Reservation.DENIED
+                    Notification.objects.create(recipient=reservation.user, content=f"{u.username} has denied your request to reserve {reservation.property.name}.")
             elif action == 'approve_cancel':
                 reservation.state = Reservation.CANCELED
+                Notification.objects.create(recipient=reservation.user, content=f"{u.username} has approved your cancellation of {reservation.property.name}.")
             elif action == 'deny_cancel':
-                reservation.state = Reservation.APPROVED
+                reservation.state = Reservation.PENDING
+                Notification.objects.create(recipient=reservation.user, content=f"{u.username} has denied your cancellation of {reservation.property.name}.")
             reservation.save()
         else:
             raise PermissionDenied("You are not the owner of this property.")
