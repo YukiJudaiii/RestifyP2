@@ -1,29 +1,7 @@
-from rest_framework.serializers import ModelSerializer
-from .models import Notifications
+from rest_framework import serializers
+from .models import Notification
 
-
-class NotificationsSerializer(ModelSerializer):
+class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Notifications
-        fields = [
-            'sender_type',
-            'sender_id',
-            'receiver_id',
-            'reservation',
-            'cancellation',
-            'comment'
-        ]
-
-
-class NotificationsDetailSerializer(ModelSerializer):
-    class Meta:
-        model = Notifications
-        fields = [
-            'sender_type',
-            'sender_id',
-            'receiver_id',
-            'reservation',
-            'cancellation',
-            'comment',
-            'content'
-        ]
+        model = Notification
+        fields = '__all__'
