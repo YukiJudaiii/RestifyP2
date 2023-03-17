@@ -16,11 +16,13 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Comment',
+            name='Reservation',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('content', models.TextField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('property_name', models.CharField(max_length=255)),
+                ('from_date', models.DateField()),
+                ('to_date', models.DateField()),
+                ('state', models.CharField(choices=[('Pending', 'Pending'), ('Approved', 'Approved'), ('Denied', 'Denied'), ('Canceled', 'Canceled'), ('Terminated', 'Terminated'), ('Completed', 'Completed'), ('Expired', 'Expired')], default='Pending', max_length=10)),
                 ('property', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='property.property')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],

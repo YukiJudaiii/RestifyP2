@@ -1,34 +1,91 @@
 from rest_framework import generics, permissions, serializers
-from .models import Comment
-from .serializers import CommentSerializer
+from .models import Comment, UserComment
+from accounts.models import CustomUser
+from .serializers import CommentSerializer, CommentReplySerializer, UserCommentSerializer
 from property.models import Property
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-class CommentCreateView(generics.ListCreateAPIView):
-    queryset = Comment.objects.all()
+from django.core.exceptions import PermissionDenied
+
+class CommentOnPropertyView(generics.CreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user.id
-        return Comment.objects.filter(user=user)
+    def perform_create(self, serializer):
+        user = self.request.user
+        property_id = self.kwargs['property_id']
+
+        try:
+            property_instance = Property.objects.get(id=property_id)
+
+            # Make sure the user is not the property owner
+            if user == property_instance.owner:
+                raise PermissionDenied("Property owners cannot comment on their own property.")
+
+            serializer.save(user=user, property=property_instance)
+        except Property.DoesNotExist:
+            raise serializers.ValidationError({"property_id": "Property with id " + str(property_id) + " does not exist."})
+
+
+
+class ReplyToCommentView(generics.CreateAPIView):
+    serializer_class = CommentReplySerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         user = self.request.user
-        property_id = self.request.data.get('property_id')
+        parent_comment_id = self.kwargs['parent_comment_id']
+
         try:
-            property_instance = Property.objects.get(id=property_id)
-            serializer.save(user=user, property=property_instance)
-        except Property.DoesNotExist:
-            raise serializers.ValidationError({"property_id": "Property with id " + property_id + " does not exist."})
+            parent_comment = Comment.objects.get(id=parent_comment_id)
+            property_instance = parent_comment.property
+
+            # Check if the user is the owner of the property before allowing them to reply
+            if user != property_instance.owner:
+                raise PermissionDenied("Only the property owner can reply to a comment.")
+
+            serializer.save(user=user, property=property_instance, parent_comment=parent_comment, rate=parent_comment.rate)
+        except Comment.DoesNotExist:
+            raise serializers.ValidationError({"parent_comment_id": "Parent comment with id " + str(parent_comment_id) + " does not exist."})
 
 
-class PropertyCommentsView(generics.ListAPIView):
+
+
+
+class DisplayPropertyCommentsView(generics.ListAPIView):
     serializer_class = CommentSerializer
+
+    def flatten_comments(self, comments):
+        flattened = []
+        for comment in comments:
+            flattened.append(comment)
+            replies = Comment.objects.filter(parent_comment=comment).order_by('created_at')
+            flattened.extend(replies)
+        return flattened
 
     def get_queryset(self):
         property_id = self.kwargs['property_id']
-        return Comment.objects.filter(property_id=property_id)
+        comments = Comment.objects.filter(property_id=property_id, parent_comment=None).order_by('created_at')
+        return self.flatten_comments(comments)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        data = []
+
+        for item in serializer.data:
+            modified_item = item.copy()
+            modified_item['user'] = item['user']['username']
+            if item.get('parent_comment'):
+                modified_item.pop('rate', None)
+                modified_item['parent_comment'] = item['parent_comment']
+            data.append(modified_item)
+
+        return Response(data)
+
+
+
 
 
 class UserCommentsView(generics.ListAPIView):
@@ -38,3 +95,25 @@ class UserCommentsView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         return Comment.objects.filter(user=user)
+    
+    
+    
+class UserCommentCreateView(generics.CreateAPIView):
+    queryset = UserComment.objects.all()
+    serializer_class = UserCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        serializer.save(author=user)
+
+
+class TargetUserCommentsView(generics.ListAPIView):
+    serializer_class = UserCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        target_username = self.kwargs['target_username']
+        target_user = CustomUser.objects.get(username=target_username)
+        return UserComment.objects.filter(target_user=target_user)
+
