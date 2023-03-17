@@ -1,18 +1,8 @@
 from django.urls import path
-from django.contrib import admin
-
-from .views import (
-    NotificationsCreateAPI,
-    NotificationListAPIView,
-    NotificationsDeleteAPIView,
-    NotificationsDetailAPIView
-)
-
-app_name = 'notifications'
+from .views import NotificationListView, NotificationReadView, NotificationClearView
 
 urlpatterns = [
-    path('view/', NotificationListAPIView.as_view()),
-    path('create/', NotificationsCreateAPI.as_view()),
-    path('delete/', NotificationsDeleteAPIView.as_view()),
-    path('<receiver_id>/', NotificationsDetailAPIView.as_view())
+    path('view/', NotificationListView.as_view(), name='notification-list'),
+    path('<int:pk>/read/', NotificationReadView.as_view(), name='notification-read'),
+    path('<int:pk>/clear/', NotificationClearView.as_view(), name='notification-clear'),
 ]
