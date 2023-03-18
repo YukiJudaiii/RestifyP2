@@ -42,7 +42,11 @@ class UserLoginAPIView(APIView):
 
         if user is not None:
             refresh = RefreshToken.for_user(user)
-            response = Response({'message': 'Login successful! Welcome ' + username + '!'})
+            response = Response({
+                'message': 'Login successful! Welcome ' + username + '!',
+                'refresh_token': str(refresh),
+                'access_token': str(refresh.access_token),
+            })
 
             # Set the access and refresh token cookies
             response.set_cookie('refresh_token', str(refresh), httponly=True)
@@ -76,6 +80,7 @@ class UserLogoutAPIView(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 

@@ -110,5 +110,9 @@ class ProfileSerializer(UserSerializer):
             instance.first_name = validated_data['first_name']
         if validated_data.get('last_name'):
             instance.last_name = validated_data['last_name']
+        if validated_data.get('avatar'):
+            instance.avatar = validated_data['avatar']
+        if validated_data.get('phone_number'):
+            instance.phone_number = validated_data['phone_number']
         instance.save()
         return instance
