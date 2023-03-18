@@ -7,7 +7,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTTokenUserAuthentication
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
 
 from accounts.models import CustomUser
 
@@ -18,6 +23,10 @@ class UserSignUpAPIView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     
+    def get(self, request, *args, **kwargs):
+        message = "This is the sign-up page"
+        return Response(message)
+
 
 class UserLoginAPIView(APIView):
     serializer_class = LogInSerializer
@@ -49,33 +58,28 @@ class UserLoginAPIView(APIView):
     
 
 class UserLogoutAPIView(APIView):
-    serializer_class = LogInSerializer
-    authentication_classes = []
-    permission_classes = []
-
     def get(self, request, *args, **kwargs):
         try:
-            # Get the refresh token from the request cookies
-            refresh_token = request.COOKIES.get('refresh_token')
-            if not refresh_token:
-                return Response({'message': 'User is already logged out.'})
+            # Get the refresh token from the cookie
+            token_value = request.COOKIES.get('refresh_token', '')
 
-            user = request.user
-            username = user.username
-            
-            # Blacklist the refresh token
-
-            token = RefreshToken(refresh_token)
+            # Blacklist the refresh and access tokens
+            token = RefreshToken(token_value)
             token.blacklist()
 
             # Clear the access and refresh token cookies
-            response = Response({'message': 'User ' + username + 'is successfully logged out.'})
+            response = Response({'message': 'User is successfully logged out.'})
             response.delete_cookie('refresh_token')
             response.delete_cookie('access_token')
+
             return response
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
 
 
 class IsOwner(permissions.BasePermission):
@@ -90,12 +94,8 @@ class UserProfileAPIView(APIView):
     def get_object(self, username):
         return get_object_or_404(CustomUser, username=username)
     
-    def get(self, request, username):
-        if request.user.username != username:
-            # The user is not authorized to access this profile
-            return Response({'error': 'You are not authorized to access this profile.'}, status=status.HTTP_403_FORBIDDEN)
-
-        user = get_object_or_404(CustomUser, username=username)
+    def get(self, request, *args, **kwargs):
+        user = self.get_object(request.user.username)
         return Response({
             'username': user.username,
             'email': user.email,
@@ -105,8 +105,8 @@ class UserProfileAPIView(APIView):
             'phone_number': str(user.phone_number),
         })
     
-    def put(self, request, username):
-        user = self.get_object(username)
+    def put(self, request, *args, **kwargs):
+        user = self.get_object(request.user.username)
         serializer = ProfileSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()

@@ -13,6 +13,7 @@ from accounts.models import CustomUser
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from notification.models import Notification
+from rest_framework import serializers
 
 from datetime import date
 
@@ -37,11 +38,23 @@ class ReservationCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         u = get_object_or_404(CustomUser, username=self.request.user.username)
         property_instance = self.request.data.get('property')
-        property_name = Property.objects.get(id=property_instance).name
+        property_obj = Property.objects.get(id=property_instance)
+
+        # Check if the user is the owner of the property
+        if property_obj.owner == u:
+            response = {
+                'message': 'You cannot create a reservation for your own property.'
+            }
+            raise serializers.ValidationError(response)
+
+        property_name = property_obj.name
         serializer.save(user=self.request.user, state=Reservation.PENDING, property_name=property_name)
-        
-        property_owner = Property.objects.get(id=property_instance).owner
-        Notification.objects.create(recipient=property_owner, content=f"{u.username} has requested to reserve your property {property_name}.")
+
+        property_owner = property_obj.owner
+        Notification.objects.create(
+            recipient=property_owner,
+            content=f"{u.username} has requested to reserve your property {property_name}."
+        )
 
 # Cancel
 class ReservationCancelView(generics.UpdateAPIView):

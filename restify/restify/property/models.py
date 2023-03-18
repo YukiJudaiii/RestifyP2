@@ -21,6 +21,7 @@ class Property(models.Model):
     amenities = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     # rating = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(5.0)])
+    image = models.ImageField(upload_to='property_images/')
     
     def save(self, *args, **kwargs):
         if self.to_date <= self.from_date:
