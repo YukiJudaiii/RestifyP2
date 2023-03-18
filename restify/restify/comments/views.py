@@ -7,13 +7,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
+from .pagination import CommentPagination
 
 from django.core.exceptions import PermissionDenied
 
 class CommentOnPropertyView(generics.CreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
+    
     def perform_create(self, serializer):
         user = self.request.user
         property_id = self.kwargs['property_id']
@@ -57,6 +59,7 @@ class ReplyToCommentView(generics.CreateAPIView):
 
 class DisplayPropertyCommentsView(generics.ListAPIView):
     serializer_class = CommentSerializer
+    pagination_class = CommentPagination
 
     def flatten_comments(self, comments):
         flattened = []
@@ -72,19 +75,31 @@ class DisplayPropertyCommentsView(generics.ListAPIView):
         return self.flatten_comments(comments)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        data = []
+        queryset = self.filter_queryset(self.get_queryset())
 
-        for item in serializer.data:
+        # Paginate the queryset
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = self.modify_serializer_data(serializer.data)
+            return self.get_paginated_response(data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        data = self.modify_serializer_data(serializer.data)
+        return Response(data)
+
+    def modify_serializer_data(self, data):
+        modified_data = []
+
+        for item in data:
             modified_item = item.copy()
             modified_item['user'] = item['user']['username']
             if item.get('parent_comment'):
                 modified_item.pop('rate', None)
                 modified_item['parent_comment'] = item['parent_comment']
-            data.append(modified_item)
+            modified_data.append(modified_item)
 
-        return Response(data)
+        return modified_data
 
 
 
@@ -93,6 +108,7 @@ class DisplayPropertyCommentsView(generics.ListAPIView):
 class UserCommentsView(generics.ListAPIView):
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = CommentPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -126,6 +142,7 @@ class UserCommentCreateView(generics.CreateAPIView):
 class TargetUserCommentsView(generics.ListAPIView):
     serializer_class = UserCommentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = CommentPagination
 
     def get_queryset(self):
         target_username = self.kwargs['target_username']

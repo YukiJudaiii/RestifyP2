@@ -5,6 +5,8 @@ from accounts.models import CustomUser
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 class NotificationPagination(PageNumberPagination):
     page_size = 2
@@ -38,10 +40,13 @@ class NotificationReadView(generics.UpdateAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class NotificationClearView(generics.DestroyAPIView):
+class NotificationClearView(APIView):
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
         user = self.request.user
-        return Notification.objects.filter(recipient=user)
+        notifications = Notification.objects.filter(recipient=user)
+        notifications.delete()
+
+        return Response({"message": "All notifications for the user have been deleted."}, status=status.HTTP_204_NO_CONTENT)
